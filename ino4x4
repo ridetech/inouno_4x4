@@ -1,70 +1,70 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-// Define the pin numbers for inputs and outputs
-const int input1Pin = 2;  // Input 1
-const int input2Pin = 3;  // Input 2
-const int input3Pin = 4;  // Input 3
-const int input4Pin = 5;  // Input 4
+// Definir los números de pin para las entradas y salidas
+const int input1Pin = 2;  // Entrada 1
+const int input2Pin = 3;  // Entrada 2
+const int input3Pin = 4;  // Entrada 3
+const int input4Pin = 5;  // Entrada 4
 
-const int relay1Pin = 6;   // Relay 1
-const int relay2Pin = 7;   // Relay 2
-const int relay3Pin = 8;   // Relay 3
-const int relay4Pin = 9;   // Relay 4
+const int relay1Pin = 6;   // Relé 1
+const int relay2Pin = 7;   // Relé 2
+const int relay3Pin = 8;   // Relé 3
+const int relay4Pin = 9;   // Relé 4
 
-// Default time thresholds in milliseconds
-unsigned long threshold1 = 3000;  // 3 seconds
-unsigned long threshold2 = 6000;  // 6 seconds
-unsigned long threshold3 = 9000;  // 9 seconds
-unsigned long threshold4 = 12000; // 12 seconds
+// Umbrales de tiempo predeterminados en milisegundos
+unsigned long threshold1 = 3000;  // 3 segundos
+unsigned long threshold2 = 6000;  // 6 segundos
+unsigned long threshold3 = 9000;  // 9 segundos
+unsigned long threshold4 = 12000; // 12 segundos
 
-// Variables to track the time the inputs have been HIGH
+// Variables para rastrear el tiempo que las entradas han estado en HIGH
 unsigned long input1Time = 0;
 unsigned long input2Time = 0;
 unsigned long input3Time = 0;
 unsigned long input4Time = 0;
 
-// Ethernet server
+// Servidor Ethernet
 EthernetServer server(80);
 
-// MAC and IP address for the Ethernet shield
+// Dirección MAC y IP para el shield Ethernet
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 177);      // Change to your desired IP address
-IPAddress netmask(255, 255, 255, 0); // Change to your desired netmask
-IPAddress gateway(192, 168, 1, 1);    // Change to your desired gateway
+IPAddress ip(192, 168, 1, 177);      // Cambiar a tu dirección IP deseada
+IPAddress netmask(255, 255, 255, 0); // Cambiar a tu máscara de subred deseada
+IPAddress gateway(192, 168, 1, 1);    // Cambiar a tu puerta de enlace deseada
 
-// Login credentials
+// Credenciales de inicio de sesión
 const char* username = "admin";
 const char* password = "Snet2017";
 bool loggedIn = false;
 
 void setup() {
-    // Initialize the input pins with internal pull-up resistors
+    // Inicializar los pines de entrada con resistencias de pull-up internas
     pinMode(input1Pin, INPUT_PULLUP);
     pinMode(input2Pin, INPUT_PULLUP);
     pinMode(input3Pin, INPUT_PULLUP);
     pinMode(input4Pin, INPUT_PULLUP);
     
-    // Initialize the relay pins
+    // Inicializar los pines de relé
     pinMode(relay1Pin, OUTPUT);
     pinMode(relay2Pin, OUTPUT);
     pinMode(relay3Pin, OUTPUT);
     pinMode(relay4Pin, OUTPUT);
     
-    // Start the Ethernet connection and server
+    // Iniciar la conexión Ethernet y el servidor
     Ethernet.begin(mac, ip, netmask, gateway);
     server.begin();
     
     Serial.begin(9600);
-    Serial.print("Server is at ");
+    Serial.print("El servidor está en ");
     Serial.println(Ethernet.localIP());
     
-    // Test relays on boot
+    // Probar los relés al arrancar
     testRelays();
 }
 
 void loop() {
-    // Check for client connections
+    // Verificar conexiones de clientes
     EthernetClient client = server.available();
     if (client) {
         String currentLine = "";
@@ -72,36 +72,36 @@ void loop() {
             if (client.available()) {
                 char c = client.read();
                 if (c == '\n') {
-                    // If the current line is blank, you are ready to send a response
+                    // Si la línea actual está en blanco, estás listo para enviar una respuesta
                     if (currentLine.length() == 0) {
-                        // Check if the user is logged in
+                        // Verificar si el usuario ha iniciado sesión
                         if (!loggedIn) {
-                            // Send login page
+                            // Enviar página de inicio de sesión
                             sendLoginPage(client);
                         } else {
-                            // Send main page with threshold configuration
+                            // Enviar página principal con configuración de umbrales
                             sendMainPage(client);
                         }
                         break;
                     } else {
-                        // Check for login attempt
+                        // Verificar intento de inicio de sesión
                         if (currentLine.startsWith("GET /login")) {
                             String user = getQueryParam(currentLine, "username");
                             String pass = getQueryParam(currentLine, "password");
                             if (strcmp(user.c_str(), username) == 0 && strcmp(pass.c_str(), password) == 0) {
                                 loggedIn = true;
-                                // Redirect to main page
+                                // Redirigir a la página principal
                                 client.println("HTTP/1.1 302 Found");
                                 client.println("Location: /");
                                 client.println();
                             } else {
-                                // Redirect back to login page on failure
+                                // Redirigir de vuelta a la página de inicio de sesión en caso de fallo
                                 client.println("HTTP/1.1 302 Found");
                                 client.println("Location: /");
                                 client.println();
                             }
                         }
-                        // Check for threshold setting
+                        // Verificar configuración de umbral
                         if (currentLine.startsWith("GET /setThresholds")) {
                             int thresh1 = getQueryParamInt(currentLine, "thresh1");
                             int thresh2 = getQueryParamInt(currentLine, "thresh2");
@@ -113,7 +113,7 @@ void loop() {
                             if (thresh3 > 0) threshold3 = thresh3;
                             if (thresh4 > 0) threshold4 = thresh4;
 
-                            // Redirect to the main page
+                            // Redirigir a la página principal
                             client.println("HTTP/1.1 302 Found");
                             client.println("Location: /");
                             client.println();
@@ -128,80 +128,80 @@ void loop() {
         client.stop();
     }
 
-    // Check inputs and trigger relays
+    // Verificar entradas y activar relés
     checkInputs();
 }
 
 void testRelays() {
-    Serial.println("Testing all relays...");
+    Serial.println("Probando todos los relés...");
     
-    // Turn on each relay with a 2-second delay
+    // Activar cada relé con un retraso de 2 segundos
     digitalWrite(relay1Pin, HIGH);  
-    delay(2000); // Delay for 2 seconds
-    digitalWrite(relay1Pin, LOW);   // Turn off relay 1
+    delay(2000); // Retraso de 2 segundos
+    digitalWrite(relay1Pin, LOW);   // Desactivar relé 1
 
     digitalWrite(relay2Pin, HIGH);  
-    delay(2000); // Delay for 2 seconds
-    digitalWrite(relay2Pin, LOW);   // Turn off relay 2
+    delay(2000); // Retraso de 2 segundos
+    digitalWrite(relay2Pin, LOW);   // Desactivar relé 2
 
     digitalWrite(relay3Pin, HIGH);  
-    delay(2000); // Delay for 2 seconds
-    digitalWrite(relay3Pin, LOW);   // Turn off relay 3
+    delay(2000); // Retraso de 2 segundos
+    digitalWrite(relay3Pin, LOW);   // Desactivar relé 3
 
     digitalWrite(relay4Pin, HIGH);  
-    delay(2000); // Delay for 2 seconds
-    digitalWrite(relay4Pin, LOW);   // Turn off relay 4
+    delay(2000); // Retraso de 2 segundos
+    digitalWrite(relay4Pin, LOW);   // Desactivar relé 4
 
-    Serial.println("All relays tested and released.");
+    Serial.println("Todos los relés probados y liberados.");
 }
 
 void checkInputs() {
-    // Check input 1
-    if (digitalRead(input1Pin) == LOW) { // LOW means button pressed if using pull-up
+    // Verificar entrada 1
+    if (digitalRead(input1Pin) == LOW) { // LOW significa que se presionó el botón si se usa pull-up
         input1Time += millis();
         if (input1Time >= threshold1) {
-            digitalWrite(relay1Pin, HIGH); // Trigger relay 1
+            digitalWrite(relay1Pin, HIGH); // Activar relé 1
         }
     } else {
-        input1Time = 0; // Reset timer if input goes HIGH
-        digitalWrite(relay1Pin, LOW); // Ensure relay 1 is off
+        input1Time = 0; // Restablecer temporizador si la entrada pasa a HIGH
+        digitalWrite(relay1Pin, LOW); // Asegurar que el relé 1 esté desactivado
     }
 
-    // Check input 2
-    if (digitalRead(input2Pin) == LOW) { // LOW means button pressed if using pull-up
+    // Verificar entrada 2
+    if (digitalRead(input2Pin) == LOW) { // LOW significa que se presionó el botón si se usa pull-up
         input2Time += millis();
         if (input2Time >= threshold2) {
-            digitalWrite(relay2Pin, HIGH); // Trigger relay 2
+            digitalWrite(relay2Pin, HIGH); // Activar relé 2
         }
     } else {
-        input2Time = 0; // Reset timer if input goes HIGH
-        digitalWrite(relay2Pin, LOW); // Ensure relay 2 is off
+        input2Time = 0; // Restablecer temporizador si la entrada pasa a HIGH
+        digitalWrite(relay2Pin, LOW); // Asegurar que el relé 2 esté desactivado
     }
 
-    // Check input 3
-    if (digitalRead(input3Pin) == LOW) { // LOW means button pressed if using pull-up
+    // Verificar entrada 3
+    if (digitalRead(input3Pin) == LOW) { // LOW significa que se presionó el botón si se usa pull-up
         input3Time += millis();
         if (input3Time >= threshold3) {
-            digitalWrite(relay3Pin, HIGH); // Trigger relay 3
+            digitalWrite(relay3Pin, HIGH); // Activar relé 3
         }
     } else {
-        input3Time = 0; // Reset timer if input goes HIGH
-        digitalWrite(relay3Pin, LOW); // Ensure relay 3 is off
+        input3Time = 0; // Restablecer temporizador si la entrada pasa a HIGH
+        digitalWrite(relay3Pin, LOW); // Asegurar que el relé 3 esté desactivado
     }
 
-    // Check input 4
-    if (digitalRead(input4Pin) == LOW) { // LOW means button pressed if using pull-up
+    // Verificar entrada 4
+    if (digitalRead(input4Pin) == LOW) { // LOW significa que se presionó el botón si se usa pull-up
         input4Time += millis();
         if (input4Time >= threshold4) {
-            digitalWrite(relay4Pin, HIGH); // Trigger relay 4
+            digitalWrite(relay4Pin, HIGH); // Activar relé 4
         }
     } else {
-        input4Time = 0; // Reset timer if input goes HIGH
-        digitalWrite(relay4Pin, LOW); // Ensure relay 4 is off
+        input4Time = 0; // Restablecer temporizador si la entrada pasa a HIGH
+        digitalWrite(relay4Pin, LOW); // Asegurar que el relé 4 esté desactivado
     }
 
-    // Delay to prevent rapid cycling
-    delay(100); // Adjust as needed
+    // Retraso para evitar ciclos rápidos
+    delay(100); // Ajustar según sea necesario
 }
 
 void sendLoginPage(EthernetClient &client) {
@@ -210,13 +210,13 @@ void sendLoginPage(EthernetClient &client) {
     client.println();
     client.println("<!DOCTYPE HTML>");
     client.println("<html>");
-    client.println("<head><title>Login</title></head>");
+    client.println("<head><title>Inicio de sesión</title></head>");
     client.println("<body>");
-    client.println("<h1>Login</h1>");
+    client.println("<h1>Iniciar sesión</h1>");
     client.println("<form action=\"/login\" method=\"GET\">");
-    client.println("Username: <input type=\"text\" name=\"username\"><br>");
-    client.println("Password: <input type=\"password\" name=\"password\"><br>");
-    client.println("<input type=\"submit\" value=\"Login\">");
+    client.println("Nombre de usuario: <input type=\"text\" name=\"username\"><br>");
+    client.println("Contraseña: <input type=\"password\" name=\"password\"><br>");
+    client.println("<input type=\"submit\" value=\"Iniciar sesión\">");
     client.println("</form>");
     client.println("</body>");
     client.println("</html>");
@@ -228,15 +228,15 @@ void sendMainPage(EthernetClient &client) {
     client.println();
     client.println("<!DOCTYPE HTML>");
     client.println("<html>");
-    client.println("<head><title>Threshold Configuration</title></head>");
+    client.println("<head><title>Configuración de umbrales</title></head>");
     client.println("<body>");
-    client.println("<h1>Set Time Thresholds</h1>");
+    client.println("<h1>Establecer umbrales de tiempo</h1>");
     client.println("<form action=\"/setThresholds\" method=\"GET\">");
-    client.println("Threshold 1 (ms): <input type=\"text\" name=\"thresh1\"><br>");
-    client.println("Threshold 2 (ms): <input type=\"text\" name=\"thresh2\"><br>");
-    client.println("Threshold 3 (ms): <input type=\"text\" name=\"thresh3\"><br>");
-    client.println("Threshold 4 (ms): <input type=\"text\" name=\"thresh4\"><br>");
-    client.println("<input type=\"submit\" value=\"Set Thresholds\">");
+    client.println("Umbral 1 (ms): <input type=\"text\" name=\"thresh1\"><br>");
+    client.println("Umbral 2 (ms): <input type=\"text\" name=\"thresh2\"><br>");
+    client.println("Umbral 3 (ms): <input type=\"text\" name=\"thresh3\"><br>");
+    client.println("Umbral 4 (ms): <input type=\"text\" name=\"thresh4\"><br>");
+    client.println("<input type=\"submit\" value=\"Establecer umbrales\">");
     client.println("</form>");
     client.println("</body>");
     client.println("</html>");
@@ -245,7 +245,7 @@ void sendMainPage(EthernetClient &client) {
 String getQueryParam(String request, String param) {
     int startIndex = request.indexOf(param + "=");
     if (startIndex == -1) return "";
-    startIndex += param.length() + 1; // Move past the parameter name and '='
+    startIndex += param.length() + 1; // Moverse más allá del nombre del parámetro y '='
     int endIndex = request.indexOf("&", startIndex);
     if (endIndex == -1) endIndex = request.indexOf(" ", startIndex);
     return request.substring(startIndex, endIndex);
