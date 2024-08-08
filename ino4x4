@@ -1,0 +1,178 @@
+#include <SPI.h>
+#include <Ethernet.h>
+
+// Define the pin numbers for inputs and outputs
+const int input1Pin = 2;  // Input 1
+const int input2Pin = 3;  // Input 2
+const int input3Pin = 4;  // Input 3
+const int input4Pin = 5;  // Input 4
+
+const int relay1Pin = 6;   // Relay 1
+const int relay2Pin = 7;   // Relay 2
+const int relay3Pin = 8;   // Relay 3
+const int relay4Pin = 9;   // Relay 4
+
+// Default time thresholds in milliseconds
+unsigned long threshold1 = 3000;  // 3 seconds
+unsigned long threshold2 = 6000;  // 6 seconds
+unsigned long threshold3 = 9000;  // 9 seconds
+unsigned long threshold4 = 12000; // 12 seconds
+
+// Variables to track the time the inputs have been HIGH
+unsigned long input1Time = 0;
+unsigned long input2Time = 0;
+unsigned long input3Time = 0;
+unsigned long input4Time = 0;
+
+// Ethernet server
+EthernetServer server(80);
+
+// MAC and IP address for the Ethernet shield
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress ip(192, 168, 1, 177); // Change to your network settings
+
+void setup() {
+    // Initialize the input pins
+    pinMode(input1Pin, INPUT);
+    pinMode(input2Pin, INPUT);
+    pinMode(input3Pin, INPUT);
+    pinMode(input4Pin, INPUT);
+    
+    // Initialize the relay pins
+    pinMode(relay1Pin, OUTPUT);
+    pinMode(relay2Pin, OUTPUT);
+    pinMode(relay3Pin, OUTPUT);
+    pinMode(relay4Pin, OUTPUT);
+    
+    // Start the Ethernet connection and server
+    Ethernet.begin(mac, ip);
+    server.begin();
+    
+    Serial.begin(9600);
+    Serial.print("Server is at ");
+    Serial.println(Ethernet.localIP());
+}
+
+void loop() {
+    // Check for client connections
+    EthernetClient client = server.available();
+    if (client) {
+        String currentLine = "";
+        while (client.connected()) {
+            if (client.available()) {
+                char c = client.read();
+                if (c == '\n') {
+                    // If the current line is blank, you are ready to send a response
+                    if (currentLine.length() == 0) {
+                        // Send HTTP response header
+                        client.println("HTTP/1.1 200 OK");
+                        client.println("Content-type:text/html");
+                        client.println();
+
+                        // Send the HTML form
+                        client.println("<!DOCTYPE HTML>");
+                        client.println("<html>");
+                        client.println("<head><title>Threshold Configuration</title></head>");
+                        client.println("<body>");
+                        client.println("<h1>Set Time Thresholds</h1>");
+                        client.println("<form action=\"/setThresholds\" method=\"GET\">");
+                        client.println("Threshold 1 (ms): <input type=\"text\" name=\"thresh1\"><br>");
+                        client.println("Threshold 2 (ms): <input type=\"text\" name=\"thresh2\"><br>");
+                        client.println("Threshold 3 (ms): <input type=\"text\" name=\"thresh3\"><br>");
+                        client.println("Threshold 4 (ms): <input type=\"text\" name=\"thresh4\"><br>");
+                        client.println("<input type=\"submit\" value=\"Set Thresholds\">");
+                        client.println("</form>");
+                        client.println("</body>");
+                        client.println("</html>");
+                        break;
+                    } else {
+                        // Check for threshold setting
+                        if (currentLine.startsWith("GET /setThresholds")) {
+                            int thresh1 = getQueryParam(currentLine, "thresh1");
+                            int thresh2 = getQueryParam(currentLine, "thresh2");
+                            int thresh3 = getQueryParam(currentLine, "thresh3");
+                            int thresh4 = getQueryParam(currentLine, "thresh4");
+
+                            if (thresh1 > 0) threshold1 = thresh1;
+                            if (thresh2 > 0) threshold2 = thresh2;
+                            if (thresh3 > 0) threshold3 = thresh3;
+                            if (thresh4 > 0) threshold4 = thresh4;
+
+                            // Redirect to the main page
+                            client.println("HTTP/1.1 302 Found");
+                            client.println("Location: /");
+                            client.println();
+                        }
+                    }
+                    currentLine = "";
+                } else if (c != '\r') {
+                    currentLine += c;
+                }
+            }
+        }
+        client.stop();
+    }
+
+    // Check inputs and trigger relays
+    checkInputs();
+}
+
+void checkInputs() {
+    // Check input 1
+    if (digitalRead(input1Pin) == HIGH) {
+        input1Time += millis();
+        if (input1Time >= threshold1) {
+            digitalWrite(relay1Pin, HIGH); // Trigger relay 1
+        }
+    } else {
+        input1Time = 0; // Reset timer if input goes LOW
+        digitalWrite(relay1Pin, LOW); // Ensure relay 1 is off
+    }
+
+    // Check input 2
+    if (digitalRead(input2Pin) == HIGH) {
+        input2Time += millis();
+        if (input2Time >= threshold2) {
+            digitalWrite(relay2Pin, HIGH); // Trigger relay 2
+        }
+    } else {
+        input2Time = 0; // Reset timer if input goes LOW
+        digitalWrite(relay2Pin, LOW); // Ensure relay 2 is off
+    }
+
+    // Check input 3
+    if (digitalRead(input3Pin) == HIGH) {
+        input3Time += millis();
+        if (input3Time >= threshold3) {
+            digitalWrite(relay3Pin, HIGH); // Trigger relay 3
+        }
+    } else {
+        input3Time = 0; // Reset timer if input goes LOW
+        digitalWrite(relay3Pin, LOW); // Ensure relay 3 is off
+    }
+
+    // Check input 4
+    if (digitalRead(input4Pin) == HIGH) {
+        input4Time += millis();
+        if (input4Time >= threshold4) {
+            digitalWrite(relay4Pin, HIGH); // Trigger relay 4
+        }
+    } else {
+        input4Time = 0; // Reset timer if input goes LOW
+        digitalWrite(relay4Pin, LOW); // Ensure relay 4 is off
+    }
+
+    // Delay to prevent rapid cycling
+    delay(100); // Adjust as needed
+}
+
+int getQueryParam(String request, String param) {
+    int startIndex = request.indexOf(param + "=");
+    if (startIndex == -1) return -1;
+    startIndex += param.length() + 1; // Move past the parameter name and '='
+    int endIndex = request.indexOf("&", startIndex);
+    if (endIndex == -1) endIndex = request.indexOf(" ", startIndex);
+    String value = request.substring(startIndex, endIndex);
+    return value.toInt();
+}
+
