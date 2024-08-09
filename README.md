@@ -5,9 +5,9 @@ Programacion para ARDUINO UNO.
 
 Tomamos 4 entradas digitales, las cuales hacen referencia a 4 salidas.
 
-common GND (siguiente a pin d13 anterior a AREF)
-Entrada 1 (input pin 2)  ---> pin6
-Entrada 1 (input pin 3)  ---> pin7
-Entrada 1 (input pin 4)  ---> pin8
-Entrada 1 (input pin 5)  ---> pin9
+common GND (siguiente a pin d13 anterior a AREF) <br>
+Entrada 1 (input pin 2)  ---> pin8 <br>
+Entrada 1 (input pin 3)  ---> pin9 <br>
+Entrada 1 (input pin 4)  ---> pin10 <br>
+Entrada 1 (input pin 5)  ---> pin11 <br>
 
