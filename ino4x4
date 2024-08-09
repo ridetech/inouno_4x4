@@ -2,15 +2,15 @@
 #include <Ethernet.h>
 
 // Definir los números de pin para las entradas y salidas
-const int input1Pin = 2;  // Entrada 1
-const int input2Pin = 3;  // Entrada 2
-const int input3Pin = 4;  // Entrada 3
-const int input4Pin = 5;  // Entrada 4
+const int input1Pin = 8;  // Entrada 1
+const int input2Pin = 9;  // Entrada 2
+const int input3Pin = 10; // Entrada 3
+const int input4Pin = 11; // Entrada 4
 
-const int relay1Pin = 6;   // Relé 1
-const int relay2Pin = 7;   // Relé 2
-const int relay3Pin = 8;   // Relé 3
-const int relay4Pin = 9;   // Relé 4
+const int relay1Pin = 4;   // Relé 1
+const int relay2Pin = 5;   // Relé 2
+const int relay3Pin = 6;   // Relé 3
+const int relay4Pin = 7;   // Relé 4
 
 // Umbrales de tiempo predeterminados en milisegundos
 unsigned long threshold1 = 3000;  // 3 segundos
