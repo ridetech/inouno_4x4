@@ -35,7 +35,7 @@ IPAddress gateway(192, 168, 1, 1);    // Cambiar a tu puerta de enlace deseada
 
 // Credenciales de inicio de sesión
 const char* username = "admin";
-const char* password = "Snet2017";
+const char* password = "*****";
 bool loggedIn = false;
 
 void setup() {
