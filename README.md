@@ -6,8 +6,20 @@ Programacion para ARDUINO UNO.
 Tomamos 4 entradas digitales, las cuales hacen referencia a 4 salidas.
 
 common GND (siguiente a pin d13 anterior a AREF) <br>
-Entrada 1 (input pin 2)  ---> pin8 <br>
-Entrada 1 (input pin 3)  ---> pin9 <br>
-Entrada 1 (input pin 4)  ---> pin10 <br>
-Entrada 1 (input pin 5)  ---> pin11 <br>
+Entrada 1 (output pin 4)  ---> pin8 <br>
+Entrada 2 (output pin 5)  ---> pin9 <br>
+Entrada 3 (output pin 6)  ---> pin10 <br>
+Entrada 4 (output pin 7)  ---> pin11 <br>
 
+Salidas relacionadas con el Shield de relays
+
+Salida 1 ---> pin 4
+Salida 2 ---> pin 5
+Salida 3 ---> pin 6
+Salida 4 ---> pin 7
+
+Se configuro en el codigo un test inicial de todos los relay (del 1 al 4 en secuencia) con lo que al encender, cambiara de estado iniciando por relay1, en 2 segundos relay2 y asi consecutivamente hasta el 4. Una vez terminado el test, se regresan todos los relay,s a la normal.
+
+El proyecto contiene un servidor web protegido por usuario y password con el que es posible de manera remota cambiar los umbrales de disparo almacenados.
+
+A fin de no registrar de manera erronea los estados, se habilito la resistencia pullup interna
