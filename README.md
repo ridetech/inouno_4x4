@@ -11,12 +11,12 @@ Entrada 2 (output pin 5)  ---> pin9 <br>
 Entrada 3 (output pin 6)  ---> pin10 <br>
 Entrada 4 (output pin 7)  ---> pin11 <br>
 
-Salidas relacionadas con el Shield de relays
+Salidas relacionadas con el Shield de relays <br>
 
-Salida 1 ---> pin 4
-Salida 2 ---> pin 5
-Salida 3 ---> pin 6
-Salida 4 ---> pin 7
+Salida 1 ---> pin 4 <br>
+Salida 2 ---> pin 5 <br>
+Salida 3 ---> pin 6 <br>
+Salida 4 ---> pin 7 <br>
 
 Se configuro en el codigo un test inicial de todos los relay (del 1 al 4 en secuencia) con lo que al encender, cambiara de estado iniciando por relay1, en 2 segundos relay2 y asi consecutivamente hasta el 4. Una vez terminado el test, se regresan todos los relay,s a la normal.
 
