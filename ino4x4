@@ -13,10 +13,10 @@ const int relay3Pin = 6;   // Relé 3
 const int relay4Pin = 7;   // Relé 4
 
 // Umbrales de tiempo predeterminados en milisegundos
-unsigned long threshold1 = 1000;  // 3 segundos
-unsigned long threshold2 = 1000;  // 6 segundos
-unsigned long threshold3 = 1000;  // 9 segundos
-unsigned long threshold4 = 1000; // 12 segundos
+unsigned long threshold1 = 1000;  // 1 segundos
+unsigned long threshold2 = 1000;  // 1 segundos
+unsigned long threshold3 = 1000;  // 1 segundos
+unsigned long threshold4 = 1000;  // 1 segundos
 
 // Variables para rastrear el tiempo que las entradas han estado en LOW
 unsigned long input1Time = 0;
@@ -141,21 +141,21 @@ void loop() {
 void testRelays() {
     Serial.println("Probando todos los relés...");
     
-    // Activar cada relé con un retraso de 2 segundos
+    // Activar cada relé con un retraso de 500 milisegundos
     digitalWrite(relay1Pin, HIGH);  
-    delay(2000); // Retraso de 2 segundos
+    delay(500); // Retraso de 500 milisegundos
     digitalWrite(relay1Pin, LOW);   // Desactivar relé 1
 
     digitalWrite(relay2Pin, HIGH);  
-    delay(2000); // Retraso de 2 segundos
+    delay(500); // Retraso de 500 milisegundos
     digitalWrite(relay2Pin, LOW);   // Desactivar relé 2
 
     digitalWrite(relay3Pin, HIGH);  
-    delay(2000); // Retraso de 2 segundos
+    delay(500); // Retraso de 500 milisegundos
     digitalWrite(relay3Pin, LOW);   // Desactivar relé 3
 
     digitalWrite(relay4Pin, HIGH);  
-    delay(2000); // Retraso de 2 segundos
+    delay(500); // Retraso de 500 milisegundos
     digitalWrite(relay4Pin, LOW);   // Desactivar relé 4
 
     Serial.println("Todos los relés probados y liberados.");
