@@ -1,16 +1,16 @@
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <Preferences.h>
 
 // Definir los números de pin para las entradas y salidas
-const int input1Pin = 18;  // Entrada 1 (GPIO 32)
-const int input2Pin = 19;  // Entrada 2 (GPIO 33)
-const int input3Pin = 23;  // Entrada 3 (GPIO 25)
-const int input4Pin = 05;  // Entrada 4 (GPIO 26)
+const int input1Pin = 18;  // Entrada 1
+const int input2Pin = 19;  // Entrada 2
+const int input3Pin = 23;  // Entrada 3
+const int input4Pin = 5;   // Entrada 4
 
-const int relay1Pin = 14;   // Relé 1 (GPIO 12)
-const int relay2Pin = 27;   // Relé 2 (GPIO 13)
-const int relay3Pin = 16;   // Relé 3 (GPIO 14)
-const int relay4Pin = 17;   // Relé 4 (GPIO 15)
+const int relay1Pin = 14;   // Relé 1
+const int relay2Pin = 27;   // Relé 2
+const int relay3Pin = 16;   // Relé 3
+const int relay4Pin = 17;   // Relé 4
 
 // Umbrales de tiempo predeterminados en milisegundos
 unsigned long threshold1 = 1000;  // 3 segundos
@@ -31,12 +31,47 @@ bool lastInput3State = HIGH;
 bool lastInput4State = HIGH;
 
 // Configuración de la red
-const char* ssid = "604";  // Cambiar a tu SSID
-const char* password = "Snet2017";  // Cambiar a tu contraseña
+const char* ssid = "6xxxx";  // Cambiar a tu SSID
+const char* password = "Sxxxxxxx7";  // Cambiar a tu contraseña
+
+// Credenciales de inicio de sesión
+const char* username = "A";  // Cambiar a tu nombre de usuario
+const char* userPassword = "a";  // Cambiar a tu contraseña
 
 WiFiServer server(80);
+Preferences preferences;
+
+bool isAuthenticated = false; // Variable para verificar autenticación
+unsigned long lastActivityTime = 0; // Tiempo de la última actividad
+const unsigned long timeoutDuration = 10 * 60 * 1000; // 10 minutos en milisegundos
 
 void setup() {
+    // Inicializar el puerto serie
+    Serial.begin(115200);
+    
+    // Conectar a la red WiFi usando DHCP
+    Serial.println("Conectando a la red WiFi...");
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.println("Intentando conectar...");
+    }
+    
+    Serial.println("Conectado a la red WiFi");
+    Serial.print("Dirección IP: ");
+    Serial.println(WiFi.localIP()); // Mostrar la dirección IP adquirida
+    
+    // Iniciar el servidor HTTP
+    server.begin();
+    Serial.println("Servidor HTTP iniciado");
+
+    // Inicializar preferencias
+    preferences.begin("thresholds", false); // Nombre del espacio de almacenamiento
+    threshold1 = preferences.getUInt("thresh1", 3000); // Cargar umbral 1
+    threshold2 = preferences.getUInt("thresh2", 6000); // Cargar umbral 2
+    threshold3 = preferences.getUInt("thresh3", 9000); // Cargar umbral 3
+    threshold4 = preferences.getUInt("thresh4", 12000); // Cargar umbral 4
+
     // Inicializar los pines de entrada con resistencias de pull-up internas
     pinMode(input1Pin, INPUT_PULLUP);
     pinMode(input2Pin, INPUT_PULLUP);
@@ -48,20 +83,6 @@ void setup() {
     pinMode(relay2Pin, OUTPUT);
     pinMode(relay3Pin, OUTPUT);
     pinMode(relay4Pin, OUTPUT);
-    
-    // Conectar a la red WiFi
-    Serial.begin(115200);
-    Serial.println("Conectando a la red WiFi...");
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Intentando conectar...");
-    }
-    Serial.println("Conectado a la red WiFi");
-    
-    // Iniciar el servidor HTTP
-    server.begin();
-    Serial.println("Servidor HTTP iniciado");
 }
 
 void loop() {
@@ -75,10 +96,38 @@ void loop() {
                 if (c == '\n') {
                     // Si la línea actual está en blanco, estás listo para enviar una respuesta
                     if (currentLine.length() == 0) {
-                        // Enviar página principal con configuración de umbrales
-                        sendMainPage(client);
+                        if (!isAuthenticated) {
+                            // Enviar página de inicio de sesión
+                            sendLoginPage(client);
+                        } else {
+                            // Verificar timeout
+                            if (millis() - lastActivityTime > timeoutDuration) {
+                                isAuthenticated = false; // Timeout, requerir nuevo inicio de sesión
+                                sendLoginPage(client);
+                            } else {
+                                // Enviar página principal con configuración de umbrales
+                                sendMainPage(client);
+                            }
+                        }
                         break;
                     } else {
+                        // Verificar intento de inicio de sesión
+                        if (currentLine.startsWith("GET /login")) {
+                            String user = getQueryParam(currentLine, "username");
+                            String pass = getQueryParam(currentLine, "password");
+                            if (user.equals(username) && pass.equals(userPassword)) {
+                                isAuthenticated = true; // Autenticación exitosa
+                                lastActivityTime = millis(); // Actualizar el tiempo de actividad
+                                client.println("HTTP/1.1 302 Found");
+                                client.println("Location: /"); // Redirigir a la página principal
+                                client.println();
+                            } else {
+                                // Redirigir de vuelta a la página de inicio de sesión en caso de fallo
+                                client.println("HTTP/1.1 302 Found");
+                                client.println("Location: /login"); // Volver a la página de inicio de sesión
+                                client.println();
+                            }
+                        }
                         // Verificar configuración de umbral
                         if (currentLine.startsWith("GET /setThresholds")) {
                             int thresh1 = getQueryParamInt(currentLine, "thresh1");
@@ -86,10 +135,22 @@ void loop() {
                             int thresh3 = getQueryParamInt(currentLine, "thresh3");
                             int thresh4 = getQueryParamInt(currentLine, "thresh4");
 
-                            if (thresh1 > 0) threshold1 = thresh1;
-                            if (thresh2 > 0) threshold2 = thresh2;
-                            if (thresh3 > 0) threshold3 = thresh3;
-                            if (thresh4 > 0) threshold4 = thresh4;
+                            if (thresh1 > 0) {
+                                threshold1 = thresh1;
+                                preferences.putUInt("thresh1", threshold1); // Guardar en NVS
+                            }
+                            if (thresh2 > 0) {
+                                threshold2 = thresh2;
+                                preferences.putUInt("thresh2", threshold2); // Guardar en NVS
+                            }
+                            if (thresh3 > 0) {
+                                threshold3 = thresh3;
+                                preferences.putUInt("thresh3", threshold3); // Guardar en NVS
+                            }
+                            if (thresh4 > 0) {
+                                threshold4 = thresh4;
+                                preferences.putUInt("thresh4", threshold4); // Guardar en NVS
+                            }
 
                             // Redirigir a la página principal
                             client.println("HTTP/1.1 302 Found");
@@ -168,20 +229,38 @@ void checkInputs() {
 }
 
 // Funciones para enviar páginas de inicio de sesión y principal
+void sendLoginPage(WiFiClient &client) {
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-type:text/html");
+    client.println();
+    client.println("<!DOCTYPE HTML>");
+    client.println("<html>");
+    client.println("<head><title>Inicio de sesión</title></head>");
+    client.println("<body>");
+    client.println("<h1>Iniciar sesión</h1>");
+    client.println("<form action=\"/login\" method=\"GET\">");
+    client.println("Nombre de usuario: <input type=\"text\" name=\"username\"><br>");
+    client.println("Contraseña: <input type=\"password\" name=\"password\"><br>");
+    client.println("<input type=\"submit\" value=\"Iniciar sesión\">");
+    client.println("</form>");
+    client.println("</body>");
+    client.println("</html>");
+}
+
 void sendMainPage(WiFiClient &client) {
     client.println("HTTP/1.1 200 OK");
     client.println("Content-type:text/html");
     client.println();
-    client.println("<DOCTYPE HTML>");
+    client.println("<!DOCTYPE HTML>");
     client.println("<html>");
     client.println("<head><title>Configuración de umbrales</title></head>");
     client.println("<body>");
     client.println("<h1>Establecer umbrales de tiempo</h1>");
     client.println("<form action=\"/setThresholds\" method=\"GET\">");
-    client.println("Umbral 1 (ms): <input type=\"text\" name=\"thresh1\"><br>");
-    client.println("Umbral 2 (ms): <input type=\"text\" name=\"thresh2\"><br>");
-    client.println("Umbral 3 (ms): <input type=\"text\" name=\"thresh3\"><br>");
-    client.println("Umbral 4 (ms): <input type=\"text\" name=\"thresh4\"><br>");
+    client.println("Umbral 1 (ms): <input type=\"text\" name=\"thresh1\" value=\"" + String(threshold1) + "\"><br>");
+    client.println("Umbral 2 (ms): <input type=\"text\" name=\"thresh2\" value=\"" + String(threshold2) + "\"><br>");
+    client.println("Umbral 3 (ms): <input type=\"text\" name=\"thresh3\" value=\"" + String(threshold3) + "\"><br>");
+    client.println("Umbral 4 (ms): <input type=\"text\" name=\"thresh4\" value=\"" + String(threshold4) + "\"><br>");
     client.println("<input type=\"submit\" value=\"Establecer umbrales\">");
     client.println("</form>");
     client.println("</body>");
