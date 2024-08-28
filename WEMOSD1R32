@@ -31,8 +31,8 @@ bool lastInput3State = HIGH;
 bool lastInput4State = HIGH;
 
 // Configuración de la red
-const char* ssid = "6xxxx";  // Cambiar a tu SSID
-const char* password = "Sxxxxxxx7";  // Cambiar a tu contraseña
+const char* ssid = "xxxx";  // Cambiar a tu SSID
+const char* password = "xxxxx";  // Cambiar a tu contraseña
 
 // Credenciales de inicio de sesión
 const char* username = "A";  // Cambiar a tu nombre de usuario
