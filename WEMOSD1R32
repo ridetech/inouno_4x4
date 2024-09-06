@@ -25,18 +25,18 @@ unsigned long input3Time = 0;
 unsigned long input4Time = 0;
 
 // Estado de las entradas
-bool lastInput1State = HIGH;
-bool lastInput2State = HIGH;
-bool lastInput3State = HIGH;
-bool lastInput4State = HIGH;
+bool lastInput1State = LOW;
+bool lastInput2State = LOW;
+bool lastInput3State = LOW;
+bool lastInput4State = LOW;
 
 // Configuración de la red
-const char* ssid = "xxxx";  // Cambiar a tu SSID
-const char* password = "xxxxx";  // Cambiar a tu contraseña
+const char* ssid = "24fib";  // Cambiar a tu SSID
+const char* password = "XahPI8bSOhoRc&XVk1&1X";  // Cambiar a tu contraseña
 
 // Credenciales de inicio de sesión
-const char* username = "A";  // Cambiar a tu nombre de usuario
-const char* userPassword = "a";  // Cambiar a tu contraseña
+const char* username = "spad";  // Cambiar a tu nombre de usuario
+const char* userPassword = "Argentina2024";  // Cambiar a tu contraseña
 
 WiFiServer server(80);
 Preferences preferences;
@@ -67,10 +67,10 @@ void setup() {
 
     // Inicializar preferencias
     preferences.begin("thresholds", false); // Nombre del espacio de almacenamiento
-    threshold1 = preferences.getUInt("thresh1", 3000); // Cargar umbral 1
-    threshold2 = preferences.getUInt("thresh2", 6000); // Cargar umbral 2
-    threshold3 = preferences.getUInt("thresh3", 9000); // Cargar umbral 3
-    threshold4 = preferences.getUInt("thresh4", 12000); // Cargar umbral 4
+    threshold1 = preferences.getUInt("thresh1", 1000); // Cargar umbral 1
+    threshold2 = preferences.getUInt("thresh2", 1000); // Cargar umbral 2
+    threshold3 = preferences.getUInt("thresh3", 1000); // Cargar umbral 3
+    threshold4 = preferences.getUInt("thresh4", 1000); // Cargar umbral 4
 
     // Inicializar los pines de entrada con resistencias de pull-up internas
     pinMode(input1Pin, INPUT_PULLUP);
@@ -174,7 +174,7 @@ void loop() {
 void checkInputs() {
     // Verificar entrada 1
     bool currentInput1State = digitalRead(input1Pin);
-    if (currentInput1State == LOW) { // Si se presiona el botón
+    if (currentInput1State == HIGH) { // Si se presiona el botón
         input1Time += 100; // Acumular tiempo (incrementar en 100 ms)
         if (input1Time >= threshold1) {
             digitalWrite(relay1Pin, HIGH); // Activar relé 1
@@ -187,7 +187,7 @@ void checkInputs() {
 
     // Verificar entrada 2
     bool currentInput2State = digitalRead(input2Pin);
-    if (currentInput2State == LOW) { // Si se presiona el botón
+    if (currentInput2State == HIGH) { // Si se presiona el botón
         input2Time += 100; // Acumular tiempo (incrementar en 100 ms)
         if (input2Time >= threshold2) {
             digitalWrite(relay2Pin, HIGH); // Activar relé 2
@@ -200,7 +200,7 @@ void checkInputs() {
 
     // Verificar entrada 3
     bool currentInput3State = digitalRead(input3Pin);
-    if (currentInput3State == LOW) { // Si se presiona el botón
+    if (currentInput3State == HIGH) { // Si se presiona el botón
         input3Time += 100; // Acumular tiempo (incrementar en 100 ms)
         if (input3Time >= threshold3) {
             digitalWrite(relay3Pin, HIGH); // Activar relé 3
@@ -213,7 +213,7 @@ void checkInputs() {
 
     // Verificar entrada 4
     bool currentInput4State = digitalRead(input4Pin);
-    if (currentInput4State == LOW) { // Si se presiona el botón
+    if (currentInput4State == HIGH) { // Si se presiona el botón
         input4Time += 100; // Acumular tiempo (incrementar en 100 ms)
         if (input4Time >= threshold4) {
             digitalWrite(relay4Pin, HIGH); // Activar relé 4
