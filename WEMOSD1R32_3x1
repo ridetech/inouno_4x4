@@ -1,0 +1,373 @@
+#include <WiFi.h>
+#include <Preferences.h>
+
+// Definir los números de pin para las entradas y salidas
+const int input1Pin = 18;  // Entrada 1
+const int input2Pin = 19;  // Entrada 2
+const int input3Pin = 23;  // Entrada 3
+const int input4Pin = 18;   // Entrada 4
+
+const int relay1Pin = 14;   // Relé 1
+const int relay2Pin = 27;   // Relé 2
+const int relay3Pin = 16;   // Relé 3
+const int relay4Pin = 17;   // Relé 4
+
+// Variables para rastrear el estado de activación de cada relé
+bool relay1Active = false;
+bool relay2Active = false;
+bool relay3Active = false;
+bool relay4Active = false;
+
+
+// Umbrales de tiempo predeterminados en milisegundos
+unsigned long threshold1 = 1000;  // Umbral para el relé 1
+unsigned long threshold2 = 1000;  // Umbral para el relé 2
+unsigned long threshold3 = 1000;  // Umbral para el relé 3
+unsigned long threshold4 = 10;  // Umbral para el relé 4 (sirena)
+
+// Variables para rastrear el tiempo que las entradas han estado en LOW
+unsigned long input1Time = 0;
+unsigned long input2Time = 0;
+unsigned long input3Time = 0;
+unsigned long input4Time = 0;
+
+// Estado de las entradas
+bool lastInput1State = HIGH;
+bool lastInput2State = HIGH;
+bool lastInput3State = HIGH;
+bool lastInput4State = HIGH;
+
+// Configuracion de la red
+const char* ssid = "24fib"; // Cambiar a tu SSID
+const char* password = "XahPI8bSOhoRc&XVk1&1X"; // Cambiar a tu contraseña
+
+// Credenciales de inicio de sesion
+const char* username = "admin";          // Cambiar a tu nombre de usuario
+const char* userPassword = "Snet2017";   // Cambiar a tu contraseña
+
+WiFiServer server(80);                    // Crear un servidor en el puerto 80
+Preferences preferences;
+
+bool isAuthenticated = false;              // Variable para verificar autenticacion
+unsigned long lastActivityTime = 0;       // Tiempo de la última actividad
+const unsigned long timeoutDuration = 30 * 60 * 1000; // Timeout de 30 minutos
+
+void setup() {
+    Serial.begin(115200);
+    
+
+    WiFi.config(IPAddress(192,168,1,13), IPAddress(192,168,1,1), IPAddress(255,255,255,0)); // Configurar IP estática
+    
+    WiFi.begin(ssid, password);            // Conectar a la red WiFi usando DHCP
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+        Serial.println("Intentando conectar...");
+    }
+    
+    Serial.println("Conectado a la red WiFi");
+    Serial.print("Direccion IP: ");
+    Serial.println(WiFi.localIP());        // Mostrar la direccion IP adquirida
+    
+    server.begin();                        // Iniciar el servidor HTTP
+    Serial.println("Servidor HTTP iniciado");
+
+    preferences.begin("thresholds", false); // Inicializar preferencias
+    threshold1 = preferences.getUInt("thresh1", threshold1); 
+    threshold2 = preferences.getUInt("thresh2", threshold2); 
+    threshold3 = preferences.getUInt("thresh3", threshold3); 
+    threshold4 = preferences.getUInt("thresh4", threshold4); 
+
+    pinMode(input1Pin, INPUT_PULLUP);     // Configurar entradas con resistencias pull-up
+    pinMode(input2Pin, INPUT_PULLUP);
+    pinMode(input3Pin, INPUT_PULLUP);
+    pinMode(input4Pin, INPUT_PULLUP);
+    
+    pinMode(relay1Pin, OUTPUT);            // Configurar pines de relé como salida
+    pinMode(relay2Pin, OUTPUT);
+    pinMode(relay3Pin, OUTPUT);
+    pinMode(relay4Pin, OUTPUT);
+}
+
+void loop() {
+    WiFiClient client = server.accept(); // Verificar conexiones de clientes
+    if (client) {
+        String currentLine = "";
+
+        while (client.connected()) {
+            if (client.available()) {
+                char c = client.read();
+                if (c == '\n') {
+                    if (currentLine.length() == 0) {
+                        if (!isAuthenticated) {
+                            sendLoginPage(client);       // Enviar página de inicio de sesion si no está autenticado
+                        } else {
+                            if (millis() - lastActivityTime > timeoutDuration) {
+                                isAuthenticated = false;   // Timeout, requerir nuevo inicio de sesion
+                                sendLoginPage(client);
+                            } else {
+                                sendMainPage(client);      // Enviar página principal si está autenticado y no hay timeout
+                            }
+                        }
+                        break;
+                    } else {
+                        if (currentLine.startsWith("GET /login")) { 
+                            String user = getQueryParam(currentLine, "username");
+                            String pass = getQueryParam(currentLine, "password");
+                            if (user.equals(username) && pass.equals(userPassword)) {
+                                isAuthenticated = true;     // Autenticacion exitosa
+                                lastActivityTime = millis(); // Actualizar el tiempo de actividad
+                                client.println("HTTP/1.1 302 Found");
+                                client.println("Location: /");   // Redirigir a la página principal
+                                client.println();
+                            } else {
+                                client.println("HTTP/1.1 302 Found");
+                                client.println("Location: /login"); // Volver a la página de inicio de sesion si falla la autenticacion
+                                client.println();
+                            }
+                        }
+                        if (currentLine.startsWith("GET /setThresholds")) { 
+                            int thresh1 = getQueryParamInt(currentLine, "thresh1");
+                            int thresh2 = getQueryParamInt(currentLine, "thresh2");
+                            int thresh3 = getQueryParamInt(currentLine, "thresh3");
+                            int thresh4 = getQueryParamInt(currentLine, "thresh4");
+
+                            if (thresh1 > 0) {
+                                threshold1 = thresh1;
+                                preferences.putUInt("thresh1", threshold1); 
+                            }
+                            if (thresh2 > 0) {
+                                threshold2 = thresh2;
+                                preferences.putUInt("thresh2", threshold2); 
+                            }
+                            if (thresh3 > 0) {
+                                threshold3 = thresh3;
+                                preferences.putUInt("thresh3", threshold3); 
+                            }
+                            if (thresh4 > 0) {
+                                threshold4 = thresh4;
+                                preferences.putUInt("thresh4", threshold4); 
+                            }
+
+                            client.println("HTTP/1.1 302 Found");
+                            client.println("Location: /");   // Redirigir a la página principal después de establecer umbrales
+                            client.println();
+                        }
+                    }
+                    currentLine = "";
+                } else if (c != '\r') {
+                    currentLine += c;
+                }
+            }
+        }
+        client.stop(); 
+    }
+
+    checkInputs();                          // Verificar entradas y activar relés
+}
+
+void checkInputs() {
+    bool currentInput1State = digitalRead(input1Pin);
+    if (currentInput1State == HIGH) {        // Si se presiona el boton (estado LOW)
+        input1Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
+        if (input1Time >= threshold1) {
+            digitalWrite(relay1Pin, HIGH);   // Activar relé 1
+            Serial.println("Activando relé 1");
+        }
+    } else {                                 // Si el boton no está presionado
+        digitalWrite(relay1Pin, LOW);       // Desactivar relé 1
+        input1Time = 0;                      // Reiniciar el temporizador
+    }
+
+    bool currentInput2State = digitalRead(input2Pin);
+    if (currentInput2State == HIGH) {        // Si se presiona el boton (estado LOW)
+        input2Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
+        if (input2Time >= threshold3) {
+            digitalWrite(relay2Pin, HIGH), 
+            digitalWrite(relay4Pin, HIGH);   // Activar relé 2
+            Serial.println("Activando relé 2 + SIRENA");
+        }
+    } else {                                 // Si el boton no está presionado
+        digitalWrite(relay2Pin, LOW);       // Desactivar relé 2
+        input2Time = 0;                      // Reiniciar el temporizador
+    }
+
+    bool currentInput3State = digitalRead(input3Pin);
+    if (currentInput3State == HIGH) {        // Si se presiona el boton (estado LOW)
+        input3Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
+        if (input3Time >= threshold3) {
+            digitalWrite(relay3Pin, HIGH), 
+            digitalWrite(relay4Pin, HIGH);   // Activar relé 3
+            Serial.println("Activando relé 3 + SIRENA");
+        }
+    } else {                                 // Si el boton no está presionado
+        digitalWrite(relay3Pin, LOW);       // Desactivar relé 3
+        input3Time = 0;                      // Reiniciar el temporizador
+    }
+
+// RELAY 4 se activa con incremento individual (encadenado a input 1) y con el tiempo colocado en input 2 y 3 en esos casos.
+
+
+    bool currentInput4State = digitalRead(input4Pin);
+    if (currentInput4State == HIGH) {        // Si se presiona el boton (estado LOW)
+        input4Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
+        if (input4Time >= threshold4) {
+            digitalWrite(relay4Pin, HIGH);   // Activar relé 4 (sirena)
+            Serial.println("Activando SIRENA");
+        }
+    } else {                                 // Si el botón no está presionado
+    // Verificar si input1Pin, input2Pin, input3Pin están en estado LOW
+    if (digitalRead(input1Pin) == LOW && digitalRead(input2Pin) == LOW && digitalRead(input3Pin) == LOW) {
+        digitalWrite(relay4Pin, LOW);       // Desactivar relé 4 (sirena)
+    }
+    input4Time = 0;                      // Reiniciar el temporizador
+}
+
+
+
+
+if (digitalRead(input1Pin) == LOW && digitalRead(input2Pin) == LOW && digitalRead(input3Pin) == LOW && digitalRead(input4Pin) ) {
+    // Colocar relay4Pin en estado LOW
+    digitalWrite(relay4Pin, LOW);
+}
+
+
+
+    delay(100);                             // Ajustar según sea necesario para evitar ciclos rápidos.
+}
+
+// Funciones para enviar páginas de inicio de sesion y principal.
+void sendLoginPage(WiFiClient &client) {
+	client.println("HTTP/1.1 200 OK");
+	client.println("Content-type:text/html");
+	client.println();
+	client.println("<!DOCTYPE HTML>");
+	client.println("<html>");
+	client.println("<head><title>login</title>");
+	
+	// Agregar CSS para embellecer los formularios.
+	client.println("<style>");
+	client.println("body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: auto; padding:20px;}"); 
+	client.println("h1 { color: #333;}"); 
+	client.println("form { background: #fff; padding:20px; border-radius:5px; box-shadow:0px -5px -5px rgba(0,0,0,.05), inset -5px -5px -5px rgba(255,255,255,.8);}"); 
+	client.println("input[type='text'], input[type='password'], input[type='submit'] { width: calc(100% -22px); padding:10px;margin:10px auto;border: solid #ccc;border-width: thin;border-radius:5px;}"); 
+	client.println("input[type='submit'] { background-color:#28a745;color:white;cursor:pointer;}"); 
+	client.println("input[type='submit']:hover { background-color:#218838;}"); 
+	client.println("</style>");
+	
+	client.println("</head>");
+	client.println("<body>");
+	client.println("<h1>Iniciar sesion</h1>");
+	client.println("<form action=\"/login\" method=\"GET\">");
+	client.println("Nombre de usuario: <input type=\"text\" name=\"username\"><br>");
+	client.println("Password: <input type=\"password\" name=\"password\"><br>");
+	client.println("<input type=\"submit\" value=\"Iniciar sesion\">");
+	client.println("</form>");
+	client.println("</body>");
+	client.println("</html>");
+}
+
+void sendMainPage(WiFiClient &client) {
+	// Enviar página HTML para configurar umbrales.
+	client.println("HTTP/1.1 200 OK");
+	client.println("Content-type:text/html");
+	client.println();
+	client.println("<!DOCTYPE HTML>");
+	client.println("<html>");
+	client.println("<head><title>Configuracion de umbrales</title>");
+
+	// Agregar CSS para embellecer los formularios.
+	client.println("<style>");
+	client.println("body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: auto; padding:20px;}"); 
+	client.println("h1 { color: #333;}"); 
+	client.println("form { background: #fff; padding:20px; border-radius:5px; box-shadow:0px -5px -5px rgba(0,0,0,.05), inset -5px -5px -5px rgba(255,255,255,.8);}"); 
+	client.println("input[type='text'], input[type='password'], input[type='submit'] { width: calc(100% -22px); padding:10px;margin:10px auto;border: solid #ccc;border-width: thin;border-radius:5px;}"); 
+	client.println("input[type='submit'] { background-color:#28a745;color:white;cursor:pointer;}"); 
+	client.println("input[type='submit']:hover { background-color:#218838;}"); 
+	client.print("</style>");
+
+	// Cerrar etiquetas HTML.
+	client.print("</head>");
+	client.print("<body>");
+	
+	// Título del formulario.
+	client.print("<h1>Establecer umbrales de tiempo</h1>");
+
+	// Formulario para establecer umbrales.
+	client.print("<form action=\"/setThresholds\" method=\"GET\">");
+	client.print ("Umbral-01(ms): <input type=\"text\" name=\"thresh1\" value=\"" + String(threshold1) + "\"><br>");
+	
+	// Mostrar umbral actual.
+	client.print ("Umbral actual(ms): " + String(threshold1) + "<br><br>");
+
+	// Repetir para los otros umbrales.
+	client.print ("Umbral-02(ms): <input type=\"text\" name=\"thresh2\" value=\"" + String(threshold2) + "\"><br>");
+	
+	// Mostrar umbral actual.
+	client.print ("Umbral actual(ms): " + String(threshold2) + "<br><br>");
+
+	// Repetir para los otros umbrales.
+	client.print ("Umbral-03(ms): <input type=\"text\" name=\"thresh3\" value=\"" + String(threshold3) + "\"><br>");
+	
+	// Mostrar umbral actual.
+	client.print ("Umbral actual(ms): " + String(threshold3) + "<br><br>");
+
+	// Repetir para los otros umbrales.
+	client.print ("Umbral-04(ms): <input type=\"text\" name=\"thresh4\" value=\"" + String(threshold4) + "\"><br>");
+	
+	// Mostrar umbral actual.
+	client.print ("Umbral actual(ms): " + String(threshold4) + "<br><br>");
+
+	// Boton para establecer umbrales.
+	client.print ("<input type=\"submit\" value=\"Establecer umbrales\">");
+	client.print ("</form>");
+
+	// Mostrar estado actual del input.
+	client.print ("<h2>Estado Actual:</h2>");
+
+	// Mostrar estado del boton-01.
+	if(digitalRead(input1Pin)==LOW){
+		client.print("<p>Entrada #01(Input-01): CERRADO</p>");
+	}else{
+		client.print("<p>Entrada #02(Input-01): ABIERTO</p>");
+	}
+
+	// Mostrar estado del boton-02.
+	if(digitalRead(input2Pin)==LOW){
+		client.print("<p>Entrada #02(Input-02): CERRADO</p>");
+	}else{
+		client.print("<p>Entrada #02(Input-02): ABIERTO</p>");
+	}
+
+	// Mostrar estado del boton-03.
+	if(digitalRead(input3Pin)==LOW){
+		client.print("<p>Entrada #03(Input-03): CERRADO</p>");
+	}else{
+		client.print("<p>Entrada #03(Input-03): ABIERTO</p>");
+	}
+
+	// Mostrar estado del boton-04.
+	if(digitalRead(input4Pin)==LOW){
+		client.print("<p>Entrada #04(Input-04): CERRADO</p>");
+	}else{
+		client.print("<p>Entrada #04(Input-04): ABIERTO</p>");
+	}
+
+	// Cerrar etiquetas HTML.
+client.print("</body>");
+client.print("</html>");
+
+}
+
+String getQueryParam(String request, String param) {
+	int startIndex = request.indexOf(param + "=");
+	if (startIndex == -1) return "";
+	startIndex += param.length() + 1; 
+	int endIndex = request.indexOf("&", startIndex);
+	if (endIndex == -1) endIndex = request.indexOf(" ", startIndex);
+	return request.substring(startIndex, endIndex);
+}
+
+int getQueryParamInt(String request, String param) {
+	String value = getQueryParam(request, param);
+	return value.toInt();
+}
