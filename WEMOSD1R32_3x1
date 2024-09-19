@@ -180,6 +180,7 @@ void checkInputs() {
 
     bool currentInput2State = digitalRead(input2Pin);
     if (currentInput2State == HIGH) {        // Si se presiona el boton (estado LOW)
+            digitalWrite(relay4Pin, LOW);
         input2Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
         if (input2Time >= threshold3) {
             digitalWrite(relay2Pin, HIGH), 
@@ -193,6 +194,7 @@ void checkInputs() {
 
     bool currentInput3State = digitalRead(input3Pin);
     if (currentInput3State == HIGH) {        // Si se presiona el boton (estado LOW)
+                digitalWrite(relay4Pin, LOW);
         input3Time += 100;                   // Acumular tiempo (incrementar en 100 ms)
         if (input3Time >= threshold3) {
             digitalWrite(relay3Pin, HIGH), 
@@ -216,13 +218,11 @@ void checkInputs() {
         }
     } else {                                 // Si el botón no está presionado
     // Verificar si input1Pin, input2Pin, input3Pin están en estado LOW
-    if (digitalRead(input1Pin) == LOW && digitalRead(input2Pin) == LOW && digitalRead(input3Pin) == LOW) {
+    if (digitalRead(input1Pin) == LOW && digitalRead(input2Pin) == LOW && digitalRead(input3Pin) == LOW && digitalRead(input4Pin) == LOW) {
         digitalWrite(relay4Pin, LOW);       // Desactivar relé 4 (sirena)
     }
     input4Time = 0;                      // Reiniciar el temporizador
 }
-
-
 
 
 if (digitalRead(input1Pin) == LOW && digitalRead(input2Pin) == LOW && digitalRead(input3Pin) == LOW && digitalRead(input4Pin) ) {
