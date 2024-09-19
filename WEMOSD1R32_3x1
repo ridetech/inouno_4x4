@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <Arduino.h>
 #include <Preferences.h>
 
 // Definir los números de pin para las entradas y salidas
@@ -326,30 +327,30 @@ void sendMainPage(WiFiClient &client) {
 
 	// Mostrar estado del boton-01.
 	if(digitalRead(input1Pin)==LOW){
-		client.print("<p>Entrada #01(Input-01): CERRADO</p>");
+		client.print("<p>Entrada #01: CERRADO</p>");
 	}else{
-		client.print("<p>Entrada #02(Input-01): ABIERTO</p>");
+		client.print("<p>Entrada #02: ABIERTO</p>");
 	}
 
 	// Mostrar estado del boton-02.
 	if(digitalRead(input2Pin)==LOW){
-		client.print("<p>Entrada #02(Input-02): CERRADO</p>");
+		client.print("<p>Entrada #02: CERRADO</p>");
 	}else{
-		client.print("<p>Entrada #02(Input-02): ABIERTO</p>");
+		client.print("<p>Entrada #02: ABIERTO</p>");
 	}
 
 	// Mostrar estado del boton-03.
 	if(digitalRead(input3Pin)==LOW){
-		client.print("<p>Entrada #03(Input-03): CERRADO</p>");
+		client.print("<p>Entrada #03: CERRADO</p>");
 	}else{
-		client.print("<p>Entrada #03(Input-03): ABIERTO</p>");
+		client.print("<p>Entrada #03: ABIERTO</p>");
 	}
 
 	// Mostrar estado del boton-04.
 	if(digitalRead(input4Pin)==LOW){
-		client.print("<p>Entrada #04(Input-04): CERRADO</p>");
+		client.print("<p>Sirena/Luz #04: APAGADA</p>");
 	}else{
-		client.print("<p>Entrada #04(Input-04): ABIERTO</p>");
+		client.print("<p>Sirena/Luz #04: ENCENDIDA</p>");
 	}
 
 	// Cerrar etiquetas HTML.
