@@ -1,0 +1,7 @@
+// Configuracion de la red
+const char* ssid = "24fib"; // Cambiar a tu SSID
+const char* password = "XahPI8bSOhoRc&XVk1&1X"; // Cambiar a tu contraseña
+
+// Credenciales de inicio de sesion
+const char* username = "admin";          // Cambiar a tu nombre de usuario
+const char* userPassword = "Snet2017";   // Cambiar a tu contra
